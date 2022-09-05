@@ -1,165 +1,50 @@
 <template>
   <div class="container">
-    <header class="header">
-      <h2 class="header__title">Добавление товара</h2>
-      <div class="header__select select">
-        <div class="select__flex">
-          <select v-model="select" name="select" id="select">
-            <option value="defaultValue" selected>По умолчанию</option>
-            <option value="maxValue">По возрастанию</option>
-            <option value="minValue">По убыванию</option>
-          </select>
-        </div>
-      </div>
-    </header>
+    <page-header @select-value="selectValue" />
     <main class="main">
-      <div class="main__forms">
-        <form class="main__form form" action="">
-          <div class="form__name text">Наименование товара</div>
-          <div class="form__input-block">
-            <input
-              v-model="inputName"
-              class="form__input"
-              placeholder="Введите наименование товара"
-              type="text"
-            />
-            <div v-if="hasName" class="form__completion-message">
-              Поле является обязательным
-            </div>
-          </div>
-          <div class="form__description text">Описание товара</div>
-          <textarea
-            v-model="inputDescription"
-            class="form__input input-description"
-            placeholder="Введите описание товара"
-          />
-          <div class="form__image text">Ссылка на изображение товара</div>
-          <div class="form__input-block">
-            <input
-              v-model="inputImage"
-              class="form__input"
-              placeholder="Введите ссылку"
-              type="text"
-            />
-            <div v-if="hasImage" class="form__completion-message">
-              Поле является обязательным
-            </div>
-          </div>
-          <div class="form__price text">Цена товара</div>
-          <div class="form__input-block">
-            <input
-              v-model="inputPrice"
-              class="form__input"
-              placeholder="Введите цену"
-              type="text"
-            />
-            <div v-if="hasPrice" class="form__completion-message">
-              Поле является обязательным
-            </div>
-          </div>
-
-          <button
-            v-on:click="addProduct()"
-            v-bind:class="{ active: validForm }"
-            class="form__button"
-            type="button"
-          >
-            Добавить товар
-          </button>
-        </form>
-      </div>
+      <product-form @add-product="addProduct"/>
       <div class="main__products products">
-        <div
+        <product-card
+          @show-deleteButton="product.hasDeleteButton = true"
+          @hide-deleteButton="product.hasDeleteButton = false"
+          @delete-product="deleteProduct(product)"
+          :product="product"
           v-for="(product, idx) in products"
-          v-on:mouseover="product.hasDeleteButton = true"
-          v-on:mouseout="product.hasDeleteButton = false"
           :key="product.name"
-          class="products__product product"
-        >
-          <div class="product__container">
-            <button
-              v-show="product.hasDeleteButton"
-              v-on:click="deleteProduct(product)"
-              class="product__delete-button"
-            >
-              <img src="../public/img/icons/delete.svg" alt="" />
-            </button>
-            <div class="product__image">
-              <img
-                class="image"
-                v-bind:src="product.image"
-                alt="product-image"
-              />
-            </div>
-            <div class="product__name">{{ product.name }}</div>
-            <div class="product__description">
-              {{ product.description }}
-            </div>
-            <div class="product__price">
-              {{ formatPrice(product.price) }} руб.
-            </div>
-          </div>
-        </div>
+        />
       </div>
     </main>
   </div>
 </template>
 
 <script>
-import { Product } from "./classes/classProduct.js";
 import upgradeLocalStorage from "./localStorageManager.js";
+
+import productCard from "./components/productCard.vue";
+import pageHeader from "./components/pageHeader.vue";
+import productForm from "./components/productForm.vue";
 
 export default {
   name: "App",
+  components: {
+    productCard,
+    pageHeader,
+    productForm
+  },
+
   data() {
     return {
-      inputName: "",
-      inputDescription:
-        "",
-      inputImage: "",
-      inputPrice: "",
-
-      hasName: false,
-      hasImage: false,
-      hasPrice: false,
-
       products: [],
       sortProducts: [],
 
-      select: "defaultValue",
+      select: null,
     };
   },
   methods: {
-    addProduct() {
-      if (!this.validForm) {
-        if (!this.inputName) {
-          this.hasName = true;
-        } else this.hasName = false;
-
-        if (!this.inputImage) {
-          this.hasImage = true;
-        } else this.hasImage = false;
-
-        if (!this.inputPrice) {
-          this.hasPrice = true;
-        } else this.hasPrice = false;
-        return;
-      }
-
-      const product = new Product(
-        this.inputName,
-        this.inputDescription,
-        this.inputImage,
-        this.inputPrice,
-        false
-      );
+    addProduct(product) {
       this.products.push(product);
-
-      this.clearInputs();
-      this.hideMessages();
-      upgradeLocalStorage(this.products);
     },
-
+    
     deleteProduct(deleteProduct) {
       this.products = this.products.filter(
         (item) => item.name !== deleteProduct.name
@@ -167,29 +52,8 @@ export default {
       upgradeLocalStorage(this.products);
     },
 
-    clearInputs() {
-      this.inputName = "";
-      this.inputDescription = "";
-      this.inputImage = "";
-      this.inputPrice = "";
-    },
-
-    formatPrice(price) {
-      return new Intl.NumberFormat("ru-RU").format(price);
-    },
-
-    hideMessages() {
-      this.hasName = false;
-      this.hasImage = false;
-      this.hasPrice = false;
-    },
-  },
-
-  computed: {
-    validForm() {
-      return this.inputName && this.inputImage && this.inputPrice
-        ? true
-        : false;
+    selectValue(val) {
+      this.select = val;
     },
   },
 
@@ -197,10 +61,12 @@ export default {
     select(val) {
       if (val === "maxValue") {
         this.products = this.products.sort((a, b) => a.price - b.price);
+        upgradeLocalStorage(this.products);
       }
 
       if (val === "minValue") {
         this.products = this.products.sort((a, b) => b.price - a.price);
+        upgradeLocalStorage(this.products);
       }
     },
   },
@@ -240,34 +106,7 @@ body {
   margin: 0 auto;
   padding: 0 15px;
 }
-.header {
-  margin: 32px 0 16px 0;
-  display: flex;
-  align-items: center;
 
-  &__title {
-    font-weight: 600;
-    font-size: 28px;
-    line-height: 35px;
-    color: #3f3f3f;
-  }
-
-  &__select {
-    flex: 1 1 auto;
-    display: flex;
-    justify-content: end;
-    align-items: center;
-  }
-}
-.select {
-  &__flex {
-    background: #fffefb;
-    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-    border-radius: 4px;
-    padding: 10px 16px 10px 16px;
-    border-radius: 4px;
-  }
-}
 .main {
   display: flex;
 
